@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ case.title }}</title>
+</head>
+<body>
+    <h1>{{ case.title }}</h1>
+    <p><strong>Дата создания:</strong> {{ case.date }}</p>
+    <p>{{ case.text }}</p>
+    <a href="{% url 'case_list' %}">Назад к списку дел</a>
+</body>
+</html>

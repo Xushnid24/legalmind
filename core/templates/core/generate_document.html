@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Генерация документа | LegalMind AI</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body class="bg-light">
+
+<div class="container py-5">
+    <div class="card shadow-lg p-4">
+        <h2 class="text-center mb-4">Генерация юридического документа</h2>
+
+        <form method="post">
+            {% csrf_token %}
+            <label class="form-label fw-bold">Опишите, какой документ нужен:</label>
+            <textarea name="message" class="form-control" rows="6"
+                      placeholder="Например: Клиент не исполняет условия договора, нужно составить претензию..."></textarea>
+
+            <button class="btn btn-primary w-100 mt-3">Сгенерировать документ</button>
+        </form>
+
+        {% if generated_text %}
+        <div class="mt-5">
+            <h4 class="fw-bold">Сгенерированный документ:</h4>
+            <div class="border p-3 bg-white rounded"
+                 style="white-space: pre-wrap;">{{ generated_text }}</div>
+
+            <a href="#" class="btn btn-success mt-3 w-100">Скачать PDF (скоро)</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <a href="{% url 'case_list' %}" class="btn btn-secondary mt-3">← Назад</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Создать дело</title>
+</head>
+<body>
+    <h1>Создать новое дело</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label>Название:</label><br>
+        <input type="text" name="title" required><br><br>
+        <label>Текст дела:</label><br>
+        <textarea name="text" rows="8" required></textarea><br><br>
+        <button type="submit">Сохранить</button>
+    </form>
+    <a href="{% url 'case_list' %}">Назад к списку дел</a>
+</body>
+</html>
