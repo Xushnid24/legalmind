@@ -124,4 +124,4 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"

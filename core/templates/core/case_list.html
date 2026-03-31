@@ -1,157 +1,144 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CASE AI — Список дел</title>
-    {% load static %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% extends "core/base.html" %}
 
-    <style>
-        body {
-            background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
-            min-height: 100vh;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 24px;
-        }
-        .hero {
-            background: url('https://images.unsplash.com/photo-1589829085413-56db5bbf3c54?auto=format&fit=crop&w=1350&q=80') center/cover;
-            border-radius: 16px;
-            padding: 4rem 2rem;
-            text-align: center;
-            color: white;
-            margin-bottom: 3rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        }
-        .hero h1 {
-            font-size: 48px;
-            font-weight: 800;
-            text-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-        .hero p {
-            font-size: 18px;
-            opacity: 0.9;
-        }
-        .card-custom {
-            border-radius: 16px;
-            padding: 25px;
-            background: white;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-        }
-        .ai-card {
-            border-radius: 16px;
-            padding: 20px;
-            background: #eef1ff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .btn-main {
-            background: #4c6ef5;
-            color: white;
-        }
-        .btn-main:hover {
-            background: #3b5bdb;
-        }
-        .table thead {
-            background: #4c6ef5;
-            color: white;
-        }
+{% block title %}CASE AI — Судебные дела{% endblock %}
 
-    </style>
-</head>
-
-<body>
-
-<!-- Навбар -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-    <div class="container">
-        <a class="navbar-brand" href="/">⚖️ CASE AI</a>
-
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-
-                <li class="nav-item"><a class="nav-link" href="/">Главная</a></li>
-                <li class="nav-item"><a class="nav-link active fw-bold" href="{% url 'case_list' %}">Дела</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'analyze_case' %}">Анализ</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'search_cases' %}">Поиск</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'generate_document' %}">Документы</a></li>
-
-            </ul>
-        </div>
+{% block content %}
+<div class="hero-panel">
+    <div class="hero-content">
+        <div class="hero-badge">Панель управления юридическими кейсами</div>
+        <h1 class="hero-title">Судебные дела под контролем</h1>
+        <p class="hero-text">
+            Управляйте активными делами, анализируйте материалы, ищите аналоги и создавайте документы
+            в одном современном интерфейсе.
+        </p>
     </div>
-</nav>
-
-<div class="container">
-
-    <!-- Хиро блок -->
-    <div class="hero">
-        <h1>Ваши судебные дела</h1>
-        <p>Удобное управление делами + инструменты искусственного интеллекта</p>
-    </div>
-
-    <!-- Карточка со списком -->
-    <div class="card-custom mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="fw-bold">📂 Список дел</h3>
-            <a href="{% url 'case_create' %}" class="btn btn-success btn-lg">
-                ➕ Создать дело
-            </a>
-        </div>
-
-        {% if cases %}
-        <table class="table table-hover">
-            <thead>
-            <tr>
-                <th>Название</th>
-                <th>Дата</th>
-                <th style="width: 150px">Действия</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for case in cases %}
-            <tr>
-                <td>
-                    <a href="{% url 'case_detail' case.pk %}" class="fw-bold text-decoration-none">
-                        {{ case.title }}
-                    </a>
-                </td>
-                <td>{{ case.date }}</td>
-                <td>
-                    <a href="{% url 'case_delete' case.pk %}" class="btn btn-danger btn-sm"
-                       onclick="return confirm('Удалить это дело?')">Удалить</a>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">Дела пока не созданы.</p>
-        {% endif %}
-    </div>
-
-    <!-- AI инструменты -->
-    <div class="ai-card mb-5">
-        <h4 class="mb-3">🤖 Инструменты ИИ</h4>
-        <div class="d-flex gap-3 flex-wrap">
-            <a href="{% url 'analyze_case' %}" class="btn btn-main btn-lg">Анализ кейса</a>
-            <a href="{% url 'search_cases' %}" class="btn btn-secondary btn-lg">Поиск аналогов</a>
-            <a href="{% url 'generate_document' %}" class="btn btn-warning btn-lg">Генерация документа</a>
-        </div>
-    </div>
-
 </div>
 
-<footer class="text-center mt-5 py-3 bg-light">
-    <p class="mb-0">&copy; 2025 CASE AI — Судебная аналитика на базе ИИ.</p>
-</footer>
+<div class="stats-strip">
+    <div class="stat-box">
+        <div class="stat-label">Всего дел</div>
+        <div class="stat-value">{{ cases|length }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-label">Скопированные дела</div>
+        <div class="stat-value">{{ copied_cases|length|default:"0" }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-label">AI-инструменты</div>
+        <div class="stat-value">3</div>
+    </div>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="glass-card section-card mb-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div>
+                    <h3 class="section-title">📂 Основные дела</h3>
+                    <div class="section-subtitle">Список всех текущих кейсов в системе</div>
+                </div>
 
-</body>
-</html>
+                <a href="{% url 'case_create' %}" class="btn btn-main">
+                    ➕ Создать дело
+                </a>
+            </div>
+
+            {% if cases %}
+                <div class="table-responsive">
+                    <table class="table table-modern align-middle">
+                        <thead>
+                            <tr>
+                                <th>Название дела</th>
+                                <th>Дата</th>
+                                <th style="width: 170px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in cases %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'case_detail' case.pk %}" class="case-link">
+                                        {{ case.title }}
+                                    </a>
+                                </td>
+                                <td>{{ case.date }}</td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{% url 'case_detail' case.pk %}" class="btn btn-sm btn-soft">
+                                            Открыть
+                                        </a>
+                                        <a href="{% url 'case_delete' case.pk %}"
+                                           class="btn btn-sm btn-danger-soft"
+                                           onclick="return confirm('Удалить это дело?')">
+                                            Удалить
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    Пока нет созданных дел. Нажми <strong>«Создать дело»</strong>, чтобы добавить первый кейс.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="glass-card section-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="section-title">🤖 AI-инструменты</h3>
+                    <div class="section-subtitle">Быстрый доступ к интеллектуальным функциям платформы</div>
+                </div>
+            </div>
+
+            <div class="tools-grid">
+                <a href="{% url 'analyze_case' %}" class="tool-card tool-analyze">
+                    <h5>Анализ кейса</h5>
+                    <p>Разбор текста дела, структура, ключевые выводы и юридическая логика.</p>
+                </a>
+
+                <a href="{% url 'search_cases' %}" class="tool-card tool-search">
+                    <h5>Поиск аналогов</h5>
+                    <p>Сравнение с похожими делами и поиск релевантных судебных материалов.</p>
+                </a>
+
+                <a href="{% url 'generate_document' %}" class="tool-card tool-doc">
+                    <h5>Генерация документа</h5>
+                    <p>Создание претензий, исков, заявлений и других юридических документов.</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="glass-card side-panel">
+            <h4 class="side-panel-title">📌 Скопированные дела</h4>
+            <div class="side-panel-subtitle">
+                Отдельная панель для дел, которые были скопированы или импортированы
+            </div>
+
+            {% if copied_cases %}
+                <div class="copied-list">
+                    {% for copied in copied_cases %}
+                        <div class="copied-item">
+                            <a href="{% url 'case_detail' copied.pk %}" class="copied-item-title">
+                                {{ copied.title }}
+                            </a>
+                            <div class="copied-meta">
+                                Дата: {{ copied.date }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    Скопированных дел пока нет.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

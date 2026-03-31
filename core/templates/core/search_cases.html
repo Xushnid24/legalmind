@@ -1,129 +1,87 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>Поиск похожих дел</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-<style>
-body {
-    background-color: #f5f6fa;
-    font-family: "Segoe UI", sans-serif;
-}
+{% extends "core/base.html" %}
 
-/* Карточки с одинаковой границей и тенью */
-.card {
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    border: 1px solid #dee2e6;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
+{% block title %}Поиск похожих дел | CASE AI{% endblock %}
 
-/* Заголовки секций */
-.card-header {
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: #0d6efd;
-    background-color: #fff;
-    border-bottom: 1px solid #dee2e6;
-}
-
-/* Карточка body */
-.card-body {
-    background-color: #fff;
-    border-top: 1px solid #dee2e6;
-    flex: 1; /* чтобы тело растягивалось на всю высоту */
-    display: flex;
-    flex-direction: column;
-}
-
-/* AI chat */
-#chat-box {
-    flex: 1;
-    overflow-y: auto;
-    padding: 15px;
-    font-family: monospace;
-    white-space: pre-wrap;
-    background-color: #eef2f7;
-    border-radius: 0 0 12px 12px;
-}
-
-/* Таблица */
-.table tbody tr:hover {
-    background-color: #f1f3f5;
-}
-</style>
-</head>
-<body>
-
-<div class="container py-5">
-    <h2 class="mb-5 text-center">Поиск похожих юридических дел</h2>
-
-    <div class="row g-4">
-
-        <!-- Форма поиска -->
-        <div class="col-md-4 d-flex">
-            <div class="card w-100">
-                <div class="card-header"><i class="fa fa-search me-2"></i>Поиск</div>
-                <div class="card-body">
-                    <form id="search-form" class="d-flex flex-column h-100">
-                        {% csrf_token %}
-                        <div class="mb-3 flex-grow-1">
-                            <textarea class="form-control h-100" name="message" placeholder="Введите текст"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100 mt-auto" id="search-button">
-                            <span id="btn-text">Искать</span>
-                            <span id="btn-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI chat -->
-        <div class="col-md-4 d-flex">
-            <div class="card w-100">
-                <div class="card-header"><i class="fa fa-robot me-2"></i>Ответ AI</div>
-                <div class="card-body" id="chat-box">Здесь появится ответ AI...</div>
-            </div>
-        </div>
-
-        <!-- Таблица результатов -->
-        <div class="col-md-4 d-flex">
-            <div class="card w-100">
-                <div class="card-header"><i class="fa fa-file-lines me-2"></i>Найденные дела</div>
-                <div class="card-body table-responsive">
-                    <table class="table table-striped table-bordered" id="results-table">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Название дела</th>
-                                <th>Дата</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="2" class="text-center">Нет данных</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
+{% block content %}
+<div class="hero-panel">
+    <div class="hero-content">
+        <div class="hero-badge">AI Similarity Search</div>
+        <h1 class="hero-title">Поиск похожих судебных дел</h1>
+        <p class="hero-text">
+            Система находит релевантные дела, показывает степень сходства,
+            ключевую причину совпадения и исход похожего дела.
+        </p>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<div class="row g-4">
+    <div class="col-lg-4 d-flex">
+        <div class="glass-card content-card w-100">
+            <div class="mb-4">
+                <h3 class="section-title">🔎 Поисковый запрос</h3>
+                <div class="section-subtitle">Введите описание дела для поиска аналогов</div>
+            </div>
+
+            <form id="search-form" class="d-flex flex-column h-100">
+                {% csrf_token %}
+                <div class="mb-3 flex-grow-1">
+                    <label class="form-label fw-semibold">Описание дела</label>
+                    <textarea
+                        class="form-control h-100"
+                        name="message"
+                        rows="12"
+                        placeholder="Например: покупатель требует возврат денег за неисправный ноутбук..."
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-main w-100" id="search-button">
+                    <span id="btn-text">Искать</span>
+                    <span id="btn-spinner" class="spinner-border spinner-border-sm d-none ms-2" role="status" aria-hidden="true"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4 d-flex">
+        <div class="glass-card content-card w-100">
+            <div class="mb-4">
+                <h3 class="section-title">🤖 Ответ AI</h3>
+                <div class="section-subtitle">Краткий вывод по найденным похожим делам</div>
+            </div>
+
+            <div id="chat-box" class="result-box flex-grow-1" style="min-height: 420px; font-family: monospace;">
+                Здесь появится ответ AI...
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 d-flex">
+        <div class="glass-card content-card w-100">
+            <div class="mb-4">
+                <h3 class="section-title">📚 Найденные дела</h3>
+                <div class="section-subtitle">Сходство, причина и исход</div>
+            </div>
+
+            <div id="results-list" class="d-flex flex-column gap-3">
+                <div class="empty-box text-center">Нет данных</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 const form = document.getElementById('search-form');
 const chatBox = document.getElementById('chat-box');
-const resultsTableBody = document.querySelector("#results-table tbody");
+const resultsList = document.getElementById("results-list");
 const searchButton = document.getElementById("search-button");
 const btnText = document.getElementById("btn-text");
 const btnSpinner = document.getElementById("btn-spinner");
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const textarea = form.querySelector('textarea[name="message"]');
     const message = textarea.value.trim();
     if (!message) return;
@@ -135,6 +93,7 @@ form.addEventListener('submit', async (e) => {
     searchButton.disabled = true;
 
     chatBox.textContent = "";
+    resultsList.innerHTML = '<div class="empty-box text-center">Поиск...</div>';
 
     try {
         const response = await fetch("{% url 'search_cases' %}", {
@@ -150,11 +109,14 @@ form.addEventListener('submit', async (e) => {
 
         let text = "";
         if (data.reply && data.reply.length > 0) {
-            data.reply.forEach(item => {
-                text += `${item.title} — ${item.date}\n`;
+            data.reply.forEach((item, index) => {
+                text += `${index + 1}. ${item.title}\n`;
+                text += `Сходство: ${item.similarity}%\n`;
+                text += `Причина: ${item.reason}\n`;
+                text += `Исход: ${item.outcome || "Не указано"}\n\n`;
             });
         } else {
-            text = "Совпадений не найдено";
+            text = "Похожие дела не найдены";
         }
 
         let i = 0;
@@ -163,25 +125,42 @@ form.addEventListener('submit', async (e) => {
                 chatBox.textContent += text.charAt(i);
                 i++;
                 chatBox.scrollTop = chatBox.scrollHeight;
-                setTimeout(typeWriter, 25);
+                setTimeout(typeWriter, 14);
             }
         }
         typeWriter();
 
-        resultsTableBody.innerHTML = "";
+        resultsList.innerHTML = "";
+
         if (data.reply && data.reply.length > 0) {
             data.reply.forEach(item => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${item.title}</td><td>${item.date}</td>`;
-                resultsTableBody.appendChild(tr);
+                const block = document.createElement("div");
+                block.className = "copied-item";
+
+                block.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold mb-1">${item.title}</div>
+                            <div class="copied-meta mb-2">Дата: ${item.date || "Не указана"}</div>
+                            <div class="small mb-2"><strong>Причина:</strong> ${item.reason || "Не указана"}</div>
+                            <div class="small text-muted"><strong>Исход:</strong> ${item.outcome || "Не указано"}</div>
+                        </div>
+                        <div class="badge rounded-pill text-bg-primary fs-6">
+                            ${item.similarity || 0}%
+                        </div>
+                    </div>
+                `;
+
+                resultsList.appendChild(block);
             });
         } else {
-            resultsTableBody.innerHTML = `<tr><td colspan="2" class="text-center">Совпадений не найдено</td></tr>`;
+            resultsList.innerHTML = '<div class="empty-box text-center">Похожие дела не найдены</div>';
         }
 
     } catch (err) {
         console.error("Ошибка при поиске:", err);
         chatBox.textContent = "Произошла ошибка. Попробуйте снова.";
+        resultsList.innerHTML = '<div class="empty-box text-center text-danger">Ошибка загрузки</div>';
     } finally {
         btnText.textContent = "Искать";
         btnSpinner.classList.add("d-none");
@@ -189,6 +168,4 @@ form.addEventListener('submit', async (e) => {
     }
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

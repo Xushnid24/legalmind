@@ -1,10 +1,12 @@
 import requests
 from django.conf import settings
 import json
-# Берём API ключ из settings.py
+import re
+
 API_KEY = getattr(settings, "OPENAI_API_KEY", None)
 if not API_KEY:
     raise ValueError("Не найден OPENAI_API_KEY в settings.py")
+
 
 def call_api(prompt, history=None):
     """
@@ -14,7 +16,6 @@ def call_api(prompt, history=None):
     if history is None:
         history = []
 
-    # Формируем сообщения для API
     messages = [{"role": role, "content": msg} for role, msg in history]
     messages.append({"role": "user", "content": prompt})
 
@@ -29,87 +30,289 @@ def call_api(prompt, history=None):
                 "model": "openai/gpt-4o-mini",
                 "messages": messages,
             },
-            timeout=30  # таймаут на случай долгого ответа
+            timeout=40
         )
         response.raise_for_status()
         data = response.json()
         return data["choices"][0]["message"]["content"]
     except Exception as e:
-        # Возвращаем ошибку как текст (можно логировать)
         return f"Ошибка AI: {str(e)}"
 
-# Конкретные функции для LegalMind
-def analyze_case(case_text, history=None):
+
+def extract_json_block(response_text, fallback):
+    """
+    Пытается вытащить JSON-объект или массив из ответа AI.
+    """
+    try:
+        return json.loads(response_text)
+    except Exception:
+        pass
+
+    patterns = [
+        r"(\{.*\})",
+        r"(\[.*\])",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, response_text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except Exception:
+                continue
+
+    return fallback
+
+
+# ---------- АНАЛИЗ ДЕЛА ----------
+
+def analyze_case_structured(case_text, history=None):
     prompt = f"""
-Ты — профессиональный ИИ-юрист. 
-Твоя задача — автоматически определить юрисдикцию дела и провести точный анализ.
+Ты — профессиональный ИИ-юрист и legal analyst.
 
-1) Сначала определи страну спора по признакам: валюта, имена, места, названия организаций, суды.
-2) Применяй ТОЛЬКО законодательство той страны, которая логически относится к делу.
-   Если валюта — рубли → РФ (ГК РФ, АПК РФ).
-   Если валюта — сум → Узбекистан (ГК РУз, ЭПК РУз).
-   Если тенге → Казахстан и т.д.
-3) Не создавай документы. Только анализ.
+Проанализируй дело и верни СТРОГО JSON без markdown, комментариев и лишнего текста.
 
-Сделай:
+Формат ответа:
+{{
+  "summary": "краткое содержание 2-3 строки",
+  "jurisdiction": "предполагаемая юрисдикция",
+  "complexity": "Низкая / Средняя / Высокая",
+  "plaintiff": "истец или 'Не указано'",
+  "defendant": "ответчик или 'Не указано'",
+  "claim": "суть требований",
+  "facts": [
+    "факт 1",
+    "факт 2"
+  ],
+  "what_must_be_proven": [
+    "что должен доказать истец 1",
+    "что должен доказать истец 2"
+  ],
+  "missing_information": [
+    "каких данных не хватает 1",
+    "каких данных не хватает 2"
+  ],
+  "legal_basis": [
+    "конкретная статья закона 1",
+    "конкретная статья закона 2"
+  ],
+  "plaintiff_position": "позиция истца только по имеющимся данным",
+  "defendant_position": "позиция ответчика только если она прямо есть в тексте; иначе: 'Не раскрыта в представленных материалах'",
+  "evidence_assessment": "оценка достаточности доказательств",
+  "risks": [
+    "риск 1",
+    "риск 2"
+  ],
+  "recommendations": [
+    "рекомендация 1",
+    "рекомендация 2"
+  ],
+  "predicted_outcome": "вероятный исход с учетом неполноты данных",
+  "winning_probability": 0
+}}
 
-1) Краткое содержание (2–3 строки).
-2) Правовая квалификация: Укачи статьи ТОЛЬКО той страны, которую ты определил.
-3) Анализ позиций истца и ответчика.
-4) Оценка доказательств.
-5) Вероятный исход дела.
-6) Риски сторон.
-7) Что нужно усилить истцу и ответчику.
+Правила:
+1. Не выдумывай факты, которых нет в тексте.
+2. Если позиция ответчика не дана в тексте, ОБЯЗАТЕЛЬНО пиши:
+   "Не раскрыта в представленных материалах".
+3. Если юрисдикция Узбекистан — указывай конкретные статьи, когда это возможно:
+   - ГК РУз
+   - КоАО РУз
+   - ГПК РУз
+4. Примеры legal_basis:
+   - ГК РУз ст. 985 — возмещение вреда
+   - ГК РУз ст. 1000 — ответственность за вред, причинённый источником повышенной опасности
+   - КоАО РУз ст. 128 — нарушение правил дорожного движения
+5. В legal_basis не ограничивайся только общими категориями, старайся указывать конкретные статьи и краткий смысл статьи.
+6. complexity:
+   - Низкая — простой спор, мало участников, мало эпизодов
+   - Средняя — спор требует анализа доказательств
+   - Высокая — экспертизы, несколько эпизодов, много участников, сложная доказательная база
+7. В what_must_be_proven укажи минимум 2 пункта, если это возможно.
+8. В missing_information укажи минимум 2 конкретных недостающих элемента, если данных недостаточно.
+9. В risks укажи минимум 2 различных риска.
+10. В recommendations укажи минимум 2 практических действия.
+11. recommendations должны быть конкретными и прикладными: протокол ДТП, фото, видео, свидетели, экспертиза, оценка ущерба, переписка, договор, квитанции и т.п.
+12. Не делай слишком уверенный вывод без доказательств.
+13. winning_probability:
+   - 40-55 если данных мало,
+   - 55-70 если есть базовые факты, но мало доказательств,
+   - 70-85 только если есть сильные доказательства,
+   - выше 85 только при очень сильной доказательной базе.
+14. Верни только JSON.
 
 Текст дела:
-«««
 {case_text}
-»»»
 """
 
-    return call_api(prompt, history)
+    response = call_api(prompt, history)
+
+    fallback = {
+        "summary": response,
+        "jurisdiction": "Не определено",
+        "complexity": "Средняя",
+        "plaintiff": "Не указано",
+        "defendant": "Не указано",
+        "claim": "Не удалось определить",
+        "facts": [],
+        "what_must_be_proven": [],
+        "missing_information": [],
+        "legal_basis": [],
+        "plaintiff_position": "Не удалось определить",
+        "defendant_position": "Не раскрыта в представленных материалах",
+        "evidence_assessment": "Недостаточно данных",
+        "risks": [],
+        "recommendations": [],
+        "predicted_outcome": "Не удалось определить",
+        "winning_probability": 0,
+    }
+
+    data = extract_json_block(response, fallback)
+
+    if not isinstance(data, dict):
+        return fallback
+
+    data.setdefault("summary", "")
+    data.setdefault("jurisdiction", "Не определено")
+    data.setdefault("complexity", "Средняя")
+    data.setdefault("plaintiff", "Не указано")
+    data.setdefault("defendant", "Не указано")
+    data.setdefault("claim", "Не удалось определить")
+    data.setdefault("facts", [])
+    data.setdefault("what_must_be_proven", [])
+    data.setdefault("missing_information", [])
+    data.setdefault("legal_basis", [])
+    data.setdefault("plaintiff_position", "Не удалось определить")
+    data.setdefault("defendant_position", "Не раскрыта в представленных материалах")
+    data.setdefault("evidence_assessment", "Недостаточно данных")
+    data.setdefault("risks", [])
+    data.setdefault("recommendations", [])
+    data.setdefault("predicted_outcome", "Не удалось определить")
+    data.setdefault("winning_probability", 0)
+
+    try:
+        data["winning_probability"] = int(data["winning_probability"])
+    except Exception:
+        data["winning_probability"] = 0
+
+    data["winning_probability"] = max(0, min(100, data["winning_probability"]))
+
+    if not isinstance(data["facts"], list):
+        data["facts"] = []
+    if not isinstance(data["what_must_be_proven"], list):
+        data["what_must_be_proven"] = []
+    if not isinstance(data["missing_information"], list):
+        data["missing_information"] = []
+    if not isinstance(data["legal_basis"], list):
+        data["legal_basis"] = []
+    if not isinstance(data["risks"], list):
+        data["risks"] = []
+    if not isinstance(data["recommendations"], list):
+        data["recommendations"] = []
+
+    return data
 
 
+def analyze_case(case_text, history=None):
+    """
+    Оставил совместимость, если где-то ещё используется старое имя.
+    """
+    return analyze_case_structured(case_text, history)
 
 
-
-import json
-import re
+# ---------- ПОИСК ПОХОЖИХ ДЕЛ ----------
 
 def search_similar_cases(prompt, history=None):
-    """
-    Ищет похожие дела через AI и возвращает список словарей с 'title' и 'date'.
-    """
     structured_prompt = f"""
-    Найди похожие юридические дела на текст ниже и верни JSON в формате:
-    [
-        {{"title": "Название дела", "date": "Дата"}},
-        ...
-    ]
-    Текст: {prompt}
-    """
+Ты — юридическая AI-система поиска прецедентов.
+
+По описанию пользователя подбери похожие УЖЕ ЗАВЕРШЁННЫЕ или релевантные юридические дела и верни СТРОГО JSON-массив.
+Без markdown, без пояснений, без текста до и после JSON.
+
+Формат:
+[
+  {{
+    "title": "Название дела",
+    "date": "2025-01-10",
+    "similarity": 87,
+    "reason": "Краткая причина схожести",
+    "outcome": "Иск удовлетворён частично"
+  }},
+  {{
+    "title": "Название дела 2",
+    "date": "2024-11-03",
+    "similarity": 74,
+    "reason": "Похожий спор о некачественном товаре",
+    "outcome": "В иске отказано"
+  }}
+]
+
+Правила:
+1. similarity — это процент сходства, целое число от 0 до 100.
+2. outcome — это ИСХОД похожего дела, а не прогноз.
+3. Не указывай вероятность победы, шанс выигрыша, прогноз или risk score.
+4. reason — коротко объясни, почему дело похоже.
+5. Верни от 3 до 5 результатов.
+6. Если точных совпадений нет, верни наиболее близкие юридические кейсы.
+7. Никакого текста кроме JSON.
+
+Текст для поиска:
+{prompt}
+"""
 
     response = call_api(structured_prompt, history)
 
-    try:
-        # Пытаемся найти JSON в ответе AI
-        json_match = re.search(r"(\[.*\])", response, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group(1))
-        else:
-            # Если JSON не найден, возвращаем просто текст как одно дело
-            return [{"title": response, "date": ""}]
-    except json.JSONDecodeError:
-        return [{"title": response, "date": ""}]
+    fallback = [
+        {
+            "title": response,
+            "date": "",
+            "similarity": 0,
+            "reason": "Не удалось структурировать ответ AI",
+            "outcome": "Не указано"
+        }
+    ]
+
+    data = extract_json_block(response, fallback)
+
+    if not isinstance(data, list):
+        return fallback
+
+    cleaned = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+
+        title = item.get("title", "Без названия")
+        date = item.get("date", "")
+        reason = item.get("reason", "Причина не указана")
+        outcome = item.get("outcome", "Не указано")
+
+        try:
+            similarity = int(item.get("similarity", 0))
+        except Exception:
+            similarity = 0
+
+        similarity = max(0, min(100, similarity))
+
+        cleaned.append({
+            "title": title,
+            "date": date,
+            "similarity": similarity,
+            "reason": reason,
+            "outcome": outcome
+        })
+
+    return cleaned if cleaned else fallback
 
 
+# ---------- ГЕНЕРАЦИЯ ДОКУМЕНТА ----------
 
 def generate_document(prompt, history=None):
     smart_prompt = f"""
-Ты — помощник-юрист. На основе текста пользователя **определи тип юридического документа** 
+Ты — помощник-юрист. На основе текста пользователя определи тип юридического документа
 и создай грамотно оформленный документ.
 
-ТИПЫ: 
+ТИПЫ:
 - Исковое заявление
 - Ходатайство
 - Жалоба
@@ -130,4 +333,3 @@ def generate_document(prompt, history=None):
 «{prompt}»
 """
     return call_api(smart_prompt, history)
-

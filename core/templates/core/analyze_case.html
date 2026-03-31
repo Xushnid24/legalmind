@@ -1,67 +1,206 @@
-<!-- core/templates/core/analyze_case.html -->
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Анализ дела</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            color: #1F2937;
-            max-width: 900px;
-            margin: 20px auto;
-        }
-        h1 { margin-bottom: 20px; }
-        form textarea {
-            width: 100%;
-            height: 150px;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #CBD5E1;
-            font-family: monospace;
-            font-size: 14px;
-            resize: vertical;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        form button {
-            margin-top: 10px;
-            padding: 8px 15px;
-            background-color: #2563EB;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        form button:hover { background-color: #1D4ED8; }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #F8FAFC;
-            border: 1px solid #CBD5E1;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        a { display: inline-block; margin-top: 20px; color: #2563EB; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <h1>Анализ дела</h1>
+на сам исправь что бы я полностью заменил
+analyze_case.html:
+{% extends "core/base.html" %}
 
-    <form method="post">
-        {% csrf_token %}
-        <textarea name="case_text" placeholder="Вставьте текст дела">{{ request.POST.case_text }}</textarea><br>
-        <button type="submit">Анализировать</button>
-    </form>
+{% block title %}Анализ дела | CASE AI{% endblock %}
 
-    {% if result %}
-        <div class="result">
-            {{ result }}
+{% block content %}
+<div class="hero-panel">
+    <div class="hero-content">
+        <div class="hero-badge">AI Legal Analysis</div>
+        <h1 class="hero-title">Структурированный анализ судебного дела</h1>
+        <p class="hero-text">
+            Вставьте текст дела, и система выделит стороны, требования, ключевые факты,
+            пробелы в доказательствах и вероятный исход спора.
+        </p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="glass-card content-card h-100">
+            <div class="mb-4">
+                <h3 class="section-title">📝 Ввод текста дела</h3>
+                <div class="section-subtitle">Введите или вставьте описание юридического спора</div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Текст дела</label>
+                    <textarea
+                        name="case_text"
+                        class="form-control"
+                        rows="16"
+                        placeholder="Вставьте текст судебного дела сюда..."
+                    >{{ request.POST.case_text }}</textarea>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-main">Анализировать</button>
+                    <a href="{% url 'case_list' %}" class="btn btn-soft">Назад</a>
+                </div>
+            </form>
         </div>
-    {% endif %}
+    </div>
 
-    <a href="{% url 'case_list' %}">Назад к списку дел</a>
-</body>
-</html>
+    <div class="col-lg-7">
+        {% if result %}
+            <div class="stats-strip mb-4" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div class="stat-box">
+                    <div class="stat-label">Юрисдикция</div>
+                    <div class="stat-value" style="font-size: 1.2rem;">{{ result.jurisdiction }}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Вероятность выигрыша</div>
+                    <div class="stat-value">{{ result.winning_probability }}%</div>
+                </div>
+            </div>
+
+            <div class="glass-card content-card mb-4">
+                <h3 class="section-title mb-3">📌 Краткая суть</h3>
+                <div class="result-box">{{ result.summary }}</div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">👤 Стороны</h4>
+                        <p><strong>Истец:</strong> {{ result.plaintiff }}</p>
+                        <p class="mb-0"><strong>Ответчик:</strong> {{ result.defendant }}</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">⚖️ Требование</h4>
+                        <div class="result-box">{{ result.claim }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">🧾 Ключевые факты</h4>
+                        {% if result.facts %}
+                            <ul class="mb-0">
+                                {% for item in result.facts %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Нет данных</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">📚 Правовая база</h4>
+                        {% if result.legal_basis %}
+                            <ul class="mb-0">
+                                {% for item in result.legal_basis %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Нет данных</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">📌 Что нужно доказать</h4>
+                        {% if result.what_must_be_proven %}
+                            <ul class="mb-0">
+                                {% for item in result.what_must_be_proven %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Нет данных</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">🧩 Чего не хватает</h4>
+                        {% if result.missing_information %}
+                            <ul class="mb-0">
+                                {% for item in result.missing_information %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Нет данных</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="glass-card content-card">
+                        <h4 class="section-title mb-3">🧠 Позиции сторон</h4>
+                        <p><strong>Позиция истца:</strong> {{ result.plaintiff_position }}</p>
+                        <p class="mb-0"><strong>Позиция ответчика:</strong> {{ result.defendant_position }}</p>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="glass-card content-card">
+                        <h4 class="section-title mb-3">🔍 Оценка доказательств</h4>
+                        <div class="result-box">{{ result.evidence_assessment }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">⚠️ Риски</h4>
+                        {% if result.risks %}
+                            <ul class="mb-0">
+                                {% for item in result.risks %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Риски не указаны</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="glass-card content-card h-100">
+                        <h4 class="section-title mb-3">✅ Что усилить</h4>
+                        {% if result.recommendations %}
+                            <ul class="mb-0">
+                                {% for item in result.recommendations %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mb-0">Рекомендации не указаны</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="glass-card content-card">
+                        <h4 class="section-title mb-3">🎯 Вероятный исход дела</h4>
+                        <div class="result-box">{{ result.predicted_outcome }}</div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="glass-card content-card h-100 d-flex align-items-center justify-content-center">
+                <div class="text-center">
+                    <h3 class="section-title mb-2">Результат появится здесь</h3>
+                    <p class="text-muted mb-0">
+                        После анализа ты увидишь не только общий вывод, но и то,
+                        что нужно доказать и каких данных пока не хватает.
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
