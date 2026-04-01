@@ -126,4 +126,4 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-OPENAI_API_KEY = os.getenv("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", "")
+OPENAI_API_KEY = "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"
